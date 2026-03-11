@@ -1,0 +1,9 @@
+.idea
+dist/
+tickory-mcp
+*.exe
+.env
+.env.*
+node_modules/
+vendor/tickory-mcp
+*.tgz

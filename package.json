@@ -1,0 +1,46 @@
+{
+  "name": "@tickory/mcp",
+  "version": "0.2.0",
+  "description": "Tickory MCP server wrapper that downloads the matching pre-built binary",
+  "license": "MIT",
+  "homepage": "https://github.com/tickory/tickory-mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tickory/tickory-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tickory/tickory-mcp/issues"
+  },
+  "bin": {
+    "tickory-mcp": "./bin/tickory-mcp.js"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "postinstall": "node ./scripts/postinstall.js",
+    "test:npm": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "mcp",
+    "tickory",
+    "crypto"
+  ]
+}

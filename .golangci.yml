@@ -1,0 +1,27 @@
+version: "2"
+
+linters:
+  enable:
+    - bodyclose
+    - errcheck
+    - goconst
+    - govet
+    - ineffassign
+    - misspell
+    - staticcheck
+    - unconvert
+    - unused
+  settings:
+    goconst:
+      min-occurrences: 5
+    errcheck:
+      check-type-assertions: true
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - goconst
+
+formatters:
+  enable:
+    - gofmt
