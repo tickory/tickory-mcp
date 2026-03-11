@@ -1,0 +1,5 @@
+dist/
+tickory-mcp
+*.exe
+.env
+.env.*
