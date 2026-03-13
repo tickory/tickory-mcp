@@ -66,10 +66,28 @@ type ExecuteScanRequest struct {
 
 // ExecuteScanResponse represents an immediate scan execution response.
 type ExecuteScanResponse struct {
-	RunID     string    `json:"run_id"`
-	ScanID    string    `json:"scan_id"`
-	StartedAt time.Time `json:"started_at"`
-	Status    string    `json:"status"`
+	RunID     string              `json:"run_id"`
+	ScanID    string              `json:"scan_id"`
+	StartedAt time.Time           `json:"started_at"`
+	Status    string              `json:"status"`
+	Matches   []ScanMatchResponse `json:"matches"`
+}
+
+// ScanMatchResponse represents a single matched symbol from a scan run.
+type ScanMatchResponse struct {
+	Symbol         string         `json:"symbol"`
+	Exchange       string         `json:"exchange"`
+	ContractType   string         `json:"contract_type"`
+	Timestamp      time.Time      `json:"timestamp"`
+	Price          float64        `json:"price"`
+	VolumeQuote    float64        `json:"volume_quote"`
+	RSI14          float64        `json:"rsi_14"`
+	MA50           float64        `json:"ma_50"`
+	MA200          float64        `json:"ma_200,omitempty"`
+	Score          *float64       `json:"score,omitempty"`
+	ChartURL       string         `json:"chart_url,omitempty"`
+	MatchedMetrics map[string]any `json:"matched_metrics,omitempty"`
+	Timeframe      string         `json:"timeframe,omitempty"`
 }
 
 // AlertEventResponse represents a single alert event.

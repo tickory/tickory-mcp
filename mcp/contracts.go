@@ -291,7 +291,7 @@ func toolDefinitions() []ToolDefinition {
 		},
 		{
 			Name:        toolRunScan,
-			Description: "Trigger a scan run immediately.",
+			Description: "Run a scan immediately and return matching symbols with indicator values.",
 			InputSchema: schemaObject(map[string]any{
 				"scan_id": stringSchema("Scan identifier."),
 				"symbols": schemaArray(stringSchema("Optional symbol override.")),
@@ -303,7 +303,8 @@ func toolDefinitions() []ToolDefinition {
 					"scan_id":    stringSchema("Scan identifier."),
 					"started_at": dateTimeSchema("Run start time."),
 					"status":     stringSchema("Run status."),
-				}, "run_id", "scan_id", "started_at", "status"),
+					"matches":    schemaArray(scanMatchSchema()),
+				}, "run_id", "scan_id", "started_at", "status", "matches"),
 			}, "schema_version", "run"),
 		},
 		{
@@ -389,6 +390,24 @@ func scanSchema() map[string]any {
 		"validation_warnings": schemaArray(stringSchema("Validation warning.")),
 		"notification_status": notificationStatusSchema(),
 	}, "id", "name", "description", "expression", "timeframe", "is_shared", "created_at", "updated_at")
+}
+
+func scanMatchSchema() map[string]any {
+	return schemaObject(map[string]any{
+		"symbol":          stringSchema("Trading pair symbol."),
+		"exchange":        stringSchema("Exchange slug."),
+		"contract_type":   stringSchema("Contract type (spot or perp)."),
+		"timestamp":       dateTimeSchema("Candle timestamp."),
+		"price":           numberFieldSchema("Current price."),
+		"volume_quote":    numberFieldSchema("Quote volume (USDT)."),
+		"rsi_14":          numberFieldSchema("14-period RSI value."),
+		"ma_50":           numberFieldSchema("50-period moving average."),
+		"ma_200":          numberFieldSchema("200-period moving average."),
+		"score":           nullableNumberSchema("Composite match score."),
+		"chart_url":       stringSchema("TradingView chart link."),
+		"matched_metrics": looseObjectSchema("All indicator values at match time."),
+		"timeframe":       stringSchema("Scan timeframe."),
+	}, "symbol", "exchange", "contract_type", "timestamp", "price", "volume_quote")
 }
 
 func hardGatesSchema() map[string]any {
@@ -628,6 +647,13 @@ func integerRangeSchema(description string, min, max int) map[string]any {
 	schema["minimum"] = min
 	schema["maximum"] = max
 	return schema
+}
+
+func numberFieldSchema(description string) map[string]any {
+	return map[string]any{
+		"type":        "number",
+		"description": description,
+	}
 }
 
 func dateTimeSchema(description string) map[string]any {

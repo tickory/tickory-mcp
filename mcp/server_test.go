@@ -428,6 +428,101 @@ func TestHandleToolCallExplainMapsHTTPErrorsToDeterministicToolError(t *testing.
 	}
 }
 
+func TestHandleToolCallRunScanReturnsMatches(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/crypto/scans/execute" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+
+		writeJSONTest(t, w, http.StatusOK, map[string]any{
+			"run_id":     "run-1",
+			"scan_id":    "scan-1",
+			"started_at": "2026-03-13T12:00:00Z",
+			"status":     "completed",
+			"matches": []any{
+				map[string]any{
+					"symbol":        "ETHUSDT",
+					"exchange":      "binance",
+					"contract_type": "perp",
+					"timestamp":     "2026-03-13T11:59:00Z",
+					"price":         1850.25,
+					"volume_quote":  250000.0,
+					"rsi_14":        28.5,
+					"ma_50":         1820.0,
+					"ma_200":        1750.0,
+					"score":         0.85,
+					"chart_url":     "https://www.tradingview.com/chart/?symbol=BINANCE:ETHUSDT.P",
+					"timeframe":     "1m",
+				},
+			},
+		})
+	}))
+	defer upstream.Close()
+
+	client, err := NewClient(Config{
+		BaseURL:    upstream.URL,
+		APIKey:     "tk_test_key",
+		HTTPClient: upstream.Client(),
+	})
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+
+	server := NewServer(client, "test-version")
+	server.negotiated = true
+	server.ready = true
+
+	resp := mustHandleMessage(t, server, `{
+		"jsonrpc":"2.0",
+		"id":5,
+		"method":"tools/call",
+		"params":{
+			"name":"tickory_run_scan",
+			"arguments":{"scan_id":"scan-1"}
+		}
+	}`)
+
+	if resp.Error != nil {
+		t.Fatalf("expected tool success, got error: %+v", resp.Error)
+	}
+
+	var result toolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		t.Fatalf("decode tool result: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success result, got error payload: %s", result.Content[0].Text)
+	}
+
+	payload, err := json.Marshal(result.StructuredContent)
+	if err != nil {
+		t.Fatalf("marshal structured content: %v", err)
+	}
+
+	var runResult RunScanResult
+	if err := json.Unmarshal(payload, &runResult); err != nil {
+		t.Fatalf("decode run scan result: %v", err)
+	}
+
+	if runResult.Run.Status != "completed" {
+		t.Fatalf("expected status completed, got %q", runResult.Run.Status)
+	}
+	if len(runResult.Run.Matches) != 1 {
+		t.Fatalf("expected 1 match, got %d", len(runResult.Run.Matches))
+	}
+
+	match := runResult.Run.Matches[0]
+	if match.Symbol != "ETHUSDT" {
+		t.Fatalf("expected symbol ETHUSDT, got %q", match.Symbol)
+	}
+	if match.RSI14 != 28.5 {
+		t.Fatalf("expected rsi_14 28.5, got %v", match.RSI14)
+	}
+	if match.Price != 1850.25 {
+		t.Fatalf("expected price 1850.25, got %v", match.Price)
+	}
+}
+
 type rpcResponseForTest struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      json.RawMessage `json:"id,omitempty"`

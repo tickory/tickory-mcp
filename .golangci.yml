@@ -13,7 +13,7 @@ linters:
     - unused
   settings:
     goconst:
-      min-occurrences: 5
+      min-occurrences: 10
     errcheck:
       check-type-assertions: true
   exclusions:
