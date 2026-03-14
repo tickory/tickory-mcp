@@ -1,6 +1,6 @@
 {
   "name": "@tickory/mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Tickory MCP server wrapper that downloads the matching pre-built binary",
   "license": "MIT",
   "homepage": "https://github.com/tickory/tickory-mcp",
@@ -42,5 +42,6 @@
     "mcp",
     "tickory",
     "crypto"
-  ]
+  ],
+  "mcpName": "io.github.tickory/tickory-mcp"
 }
