@@ -479,6 +479,10 @@ func (s *Server) toolHandler(name string) ToolHandler {
 		return s.handleGetAlertEvent
 	case toolExplainAlertEvent:
 		return s.handleExplainAlertEvent
+	case toolGetMarketData:
+		return s.handleGetMarketData
+	case toolListSymbols:
+		return s.handleListSymbols
 	default:
 		return func(context.Context, json.RawMessage) (any, error) {
 			return nil, fmt.Errorf("tool %s is not registered", name)
@@ -646,6 +650,42 @@ func (s *Server) handleExplainAlertEvent(ctx context.Context, raw json.RawMessag
 	return ExplainAlertEventResult{
 		SchemaVersion:             contractVersion,
 		AlertEventExplainResponse: *resp,
+	}, nil
+}
+
+func (s *Server) handleGetMarketData(ctx context.Context, raw json.RawMessage) (any, error) {
+	args, err := decodeArguments[GetMarketDataArgs](raw)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.client.GetMarketData(ctx, args.Symbols)
+	if err != nil {
+		return nil, err
+	}
+
+	return GetMarketDataResult{
+		SchemaVersion: contractVersion,
+		MarketData:    resp.MarketData,
+		Count:         resp.Count,
+	}, nil
+}
+
+func (s *Server) handleListSymbols(ctx context.Context, raw json.RawMessage) (any, error) {
+	args, err := decodeArguments[ListSymbolsArgs](raw)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.client.ListSymbols(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+
+	return ListSymbolsResult{
+		SchemaVersion: contractVersion,
+		Symbols:       resp.Symbols,
+		Count:         resp.Count,
 	}, nil
 }
 

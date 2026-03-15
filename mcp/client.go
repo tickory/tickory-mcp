@@ -206,6 +206,36 @@ func (c *Client) ExplainAlertEvent(ctx context.Context, eventID string) (*AlertE
 	return &resp, nil
 }
 
+func (c *Client) GetMarketData(ctx context.Context, symbols []string) (*MarketDataResponse, error) {
+	query := url.Values{}
+	query.Set("symbols", strings.Join(symbols, ","))
+
+	var resp MarketDataResponse
+	if err := c.doJSON(ctx, http.MethodGet, "/api/crypto/market-data", query, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (c *Client) ListSymbols(ctx context.Context, args ListSymbolsArgs) (*ListSymbolsResponse, error) {
+	query := url.Values{}
+	if args.Exchange != nil {
+		query.Set("exchange", *args.Exchange)
+	}
+	if args.ContractType != nil {
+		query.Set("contract_type", *args.ContractType)
+	}
+	if args.Query != nil {
+		query.Set("q", *args.Query)
+	}
+
+	var resp ListSymbolsResponse
+	if err := c.doJSON(ctx, http.MethodGet, "/api/crypto/symbols", query, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 func (c *Client) doJSON(ctx context.Context, method, path string, query url.Values, requestBody any, responseBody any) error {
 	endpoint, err := url.Parse(c.baseURL + path)
 	if err != nil {

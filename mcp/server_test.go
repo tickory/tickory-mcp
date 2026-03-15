@@ -57,8 +57,8 @@ func TestHandleMessageInitializeAndListTools(t *testing.T) {
 		t.Fatalf("decode tools/list result: %v", err)
 	}
 
-	if len(result.Tools) != 9 {
-		t.Fatalf("expected 9 tools, got %d", len(result.Tools))
+	if len(result.Tools) != 11 {
+		t.Fatalf("expected 11 tools, got %d", len(result.Tools))
 	}
 
 	names := make([]string, 0, len(result.Tools))
@@ -79,6 +79,8 @@ func TestHandleMessageInitializeAndListTools(t *testing.T) {
 		toolListAlertEvents,
 		toolGetAlertEvent,
 		toolExplainAlertEvent,
+		toolGetMarketData,
+		toolListSymbols,
 	}
 	if strings.Join(names, ",") != strings.Join(expected, ",") {
 		t.Fatalf("unexpected tool order: %v", names)
@@ -520,6 +522,186 @@ func TestHandleToolCallRunScanReturnsMatches(t *testing.T) {
 	}
 	if match.Price != 1850.25 {
 		t.Fatalf("expected price 1850.25, got %v", match.Price)
+	}
+}
+
+func TestHandleToolCallGetMarketData(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/crypto/market-data" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.URL.Query().Get("symbols"); got != "BTCUSDT,ETHUSDT" {
+			t.Fatalf("expected symbols=BTCUSDT,ETHUSDT, got %q", got)
+		}
+
+		rsi := 45.2
+		writeJSONTest(t, w, http.StatusOK, map[string]any{
+			"market_data": []any{
+				map[string]any{
+					"symbol":         "BTCUSDT",
+					"exchange":       "binance",
+					"contract_type":  "perp",
+					"timeframe":      "1m",
+					"timestamp":      "2026-03-15T10:00:00Z",
+					"price":          67500.50,
+					"rsi_14":         rsi,
+					"volume_quote":   500000.0,
+					"daily_move_pct": 1.25,
+				},
+			},
+			"count": 1,
+		})
+	}))
+	defer upstream.Close()
+
+	client, err := NewClient(Config{BaseURL: upstream.URL, APIKey: "tk_test_key", HTTPClient: upstream.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	server := NewServer(client, "test-version")
+	server.negotiated = true
+	server.ready = true
+
+	resp := mustHandleMessage(t, server, `{
+		"jsonrpc":"2.0",
+		"id":10,
+		"method":"tools/call",
+		"params":{
+			"name":"tickory_get_market_data",
+			"arguments":{"symbols":["BTCUSDT","ETHUSDT"]}
+		}
+	}`)
+
+	if resp.Error != nil {
+		t.Fatalf("expected tool success, got error: %+v", resp.Error)
+	}
+
+	var result toolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		t.Fatalf("decode tool result: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success, got error: %s", result.Content[0].Text)
+	}
+
+	payload, err := json.Marshal(result.StructuredContent)
+	if err != nil {
+		t.Fatalf("marshal structured content: %v", err)
+	}
+
+	var mdResult GetMarketDataResult
+	if err := json.Unmarshal(payload, &mdResult); err != nil {
+		t.Fatalf("decode market data result: %v", err)
+	}
+	if mdResult.Count != 1 {
+		t.Fatalf("expected count 1, got %d", mdResult.Count)
+	}
+	if mdResult.MarketData[0].Symbol != "BTCUSDT" {
+		t.Fatalf("expected BTCUSDT, got %q", mdResult.MarketData[0].Symbol)
+	}
+	if mdResult.MarketData[0].Price != 67500.50 {
+		t.Fatalf("expected price 67500.50, got %v", mdResult.MarketData[0].Price)
+	}
+}
+
+func TestHandleToolCallGetMarketDataValidation(t *testing.T) {
+	server := NewServer(&Client{}, "test-version")
+	server.negotiated = true
+	server.ready = true
+
+	resp := mustHandleMessage(t, server, `{
+		"jsonrpc":"2.0",
+		"id":11,
+		"method":"tools/call",
+		"params":{
+			"name":"tickory_get_market_data",
+			"arguments":{}
+		}
+	}`)
+
+	if resp.Error == nil {
+		t.Fatal("expected validation error for empty symbols")
+	}
+	if resp.Error.Code != rpcCodeBadParams {
+		t.Fatalf("expected bad params error, got %d", resp.Error.Code)
+	}
+}
+
+func TestHandleToolCallListSymbols(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/crypto/symbols" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.URL.Query().Get("contract_type"); got != "perp" {
+			t.Fatalf("expected contract_type=perp, got %q", got)
+		}
+		if got := r.URL.Query().Get("q"); got != "BTC" {
+			t.Fatalf("expected q=BTC, got %q", got)
+		}
+
+		writeJSONTest(t, w, http.StatusOK, map[string]any{
+			"symbols": []any{
+				map[string]any{
+					"symbol":        "BTCUSDT",
+					"exchange":      "binance",
+					"contract_type": "perp",
+					"available":     true,
+				},
+			},
+			"count": 1,
+		})
+	}))
+	defer upstream.Close()
+
+	client, err := NewClient(Config{BaseURL: upstream.URL, APIKey: "tk_test_key", HTTPClient: upstream.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	server := NewServer(client, "test-version")
+	server.negotiated = true
+	server.ready = true
+
+	resp := mustHandleMessage(t, server, `{
+		"jsonrpc":"2.0",
+		"id":12,
+		"method":"tools/call",
+		"params":{
+			"name":"tickory_list_symbols",
+			"arguments":{"contract_type":"perp","q":"BTC"}
+		}
+	}`)
+
+	if resp.Error != nil {
+		t.Fatalf("expected tool success, got error: %+v", resp.Error)
+	}
+
+	var result toolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		t.Fatalf("decode tool result: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success, got error: %s", result.Content[0].Text)
+	}
+
+	payload, err := json.Marshal(result.StructuredContent)
+	if err != nil {
+		t.Fatalf("marshal structured content: %v", err)
+	}
+
+	var symResult ListSymbolsResult
+	if err := json.Unmarshal(payload, &symResult); err != nil {
+		t.Fatalf("decode list symbols result: %v", err)
+	}
+	if symResult.Count != 1 {
+		t.Fatalf("expected count 1, got %d", symResult.Count)
+	}
+	if symResult.Symbols[0].Symbol != "BTCUSDT" {
+		t.Fatalf("expected BTCUSDT, got %q", symResult.Symbols[0].Symbol)
+	}
+	if !symResult.Symbols[0].Available {
+		t.Fatal("expected symbol to be available")
 	}
 }
 

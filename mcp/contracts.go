@@ -19,6 +19,8 @@ const (
 	toolListAlertEvents        = "tickory_list_alert_events"
 	toolGetAlertEvent          = "tickory_get_alert_event"
 	toolExplainAlertEvent      = "tickory_explain_alert_event"
+	toolGetMarketData          = "tickory_get_market_data"
+	toolListSymbols            = "tickory_list_symbols"
 	defaultCreateScanTimeframe = "1m"
 )
 
@@ -174,6 +176,48 @@ func (a AlertEventIDArgs) Validate() error {
 		return fmt.Errorf("event_id must be a valid UUID")
 	}
 	return nil
+}
+
+type GetMarketDataArgs struct {
+	Symbols []string `json:"symbols"`
+}
+
+func (a GetMarketDataArgs) Validate() error {
+	if len(a.Symbols) == 0 {
+		return fmt.Errorf("symbols is required")
+	}
+	if len(a.Symbols) > 50 {
+		return fmt.Errorf("symbols must contain at most 50 entries")
+	}
+	return nil
+}
+
+type ListSymbolsArgs struct {
+	Exchange     *string `json:"exchange,omitempty"`
+	ContractType *string `json:"contract_type,omitempty"`
+	Query        *string `json:"q,omitempty"`
+}
+
+func (a ListSymbolsArgs) Validate() error {
+	if a.ContractType != nil {
+		ct := strings.TrimSpace(*a.ContractType)
+		if ct != "" && ct != "spot" && ct != "perp" {
+			return fmt.Errorf("contract_type must be one of spot, perp")
+		}
+	}
+	return nil
+}
+
+type GetMarketDataResult struct {
+	SchemaVersion string            `json:"schema_version"`
+	MarketData    []MarketDataEntry `json:"market_data"`
+	Count         int               `json:"count"`
+}
+
+type ListSymbolsResult struct {
+	SchemaVersion string        `json:"schema_version"`
+	Symbols       []SymbolEntry `json:"symbols"`
+	Count         int           `json:"count"`
 }
 
 type UpdateScanResponse struct {
@@ -368,6 +412,32 @@ func toolDefinitions() []ToolDefinition {
 				"explanation":     explainBodySchema(),
 			}, "schema_version", "payload_version", "alert_event_id", "scan_id", "event_type", "explanation"),
 		},
+		{
+			Name:        toolGetMarketData,
+			Description: "Get live price, indicators, and metadata for one or more symbols.",
+			InputSchema: schemaObject(map[string]any{
+				"symbols": schemaArray(stringSchema("Symbol name (e.g. BTCUSDT).")),
+			}, "symbols"),
+			OutputSchema: schemaObject(map[string]any{
+				"schema_version": schemaVersionSchema(),
+				"market_data":    schemaArray(marketDataEntrySchema()),
+				"count":          integerSchema("Number of symbols returned."),
+			}, "schema_version", "market_data", "count"),
+		},
+		{
+			Name:        toolListSymbols,
+			Description: "List tracked symbols with optional filters for exchange, contract type, and search query.",
+			InputSchema: schemaObject(map[string]any{
+				"exchange":      stringSchema("Optional exchange filter (e.g. binance)."),
+				"contract_type": stringEnumSchema("Optional contract type filter.", "spot", "perp"),
+				"q":             stringSchema("Optional search query to filter symbols by name."),
+			}),
+			OutputSchema: schemaObject(map[string]any{
+				"schema_version": schemaVersionSchema(),
+				"symbols":        schemaArray(symbolEntrySchema()),
+				"count":          integerSchema("Number of symbols returned."),
+			}, "schema_version", "symbols", "count"),
+		},
 	}
 }
 
@@ -549,6 +619,32 @@ func explainSuppressionSchema() map[string]any {
 		"sent_today":       nullableIntegerSchema("Deliveries sent today."),
 		"reset_at":         nullableDateTimeSchema("Suppression reset timestamp."),
 	}, "suppressed", "reason_codes")
+}
+
+func marketDataEntrySchema() map[string]any {
+	return schemaObject(map[string]any{
+		"symbol":         stringSchema("Trading pair symbol."),
+		"exchange":       stringSchema("Exchange slug."),
+		"contract_type":  stringSchema("Contract type (spot or perp)."),
+		"timeframe":      stringSchema("Candle timeframe."),
+		"timestamp":      stringSchema("Candle timestamp."),
+		"price":          numberFieldSchema("Current price."),
+		"rsi_14":         nullableNumberSchema("14-period RSI value."),
+		"ma_50":          nullableNumberSchema("50-period moving average."),
+		"ma_200":         nullableNumberSchema("200-period moving average."),
+		"volume_quote":   numberFieldSchema("Quote volume (USDT)."),
+		"funding_rate":   nullableNumberSchema("Funding rate (perp only)."),
+		"daily_move_pct": numberFieldSchema("Daily price move percentage."),
+	}, "symbol", "exchange", "contract_type", "timeframe", "timestamp", "price", "volume_quote", "daily_move_pct")
+}
+
+func symbolEntrySchema() map[string]any {
+	return schemaObject(map[string]any{
+		"symbol":        stringSchema("Trading pair symbol."),
+		"exchange":      stringSchema("Exchange slug."),
+		"contract_type": stringSchema("Contract type (spot or perp)."),
+		"available":     boolSchema("Whether the symbol is currently available for scanning."),
+	}, "symbol", "exchange", "contract_type", "available")
 }
 
 func indicatorCategorySchema() map[string]any {

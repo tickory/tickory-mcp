@@ -224,6 +224,42 @@ type AlertEventExplainResponse struct {
 	Explanation    ExplainResponseBody `json:"explanation"`
 }
 
+// MarketDataEntry represents live indicator data for a single symbol.
+type MarketDataEntry struct {
+	Symbol       string   `json:"symbol"`
+	Exchange     string   `json:"exchange"`
+	ContractType string   `json:"contract_type"`
+	Timeframe    string   `json:"timeframe"`
+	Timestamp    string   `json:"timestamp"`
+	Price        float64  `json:"price"`
+	RSI14        *float64 `json:"rsi_14,omitempty"`
+	MA50         *float64 `json:"ma_50,omitempty"`
+	MA200        *float64 `json:"ma_200,omitempty"`
+	VolumeQuote  float64  `json:"volume_quote"`
+	FundingRate  *float64 `json:"funding_rate,omitempty"`
+	DailyMovePct float64  `json:"daily_move_pct"`
+}
+
+// MarketDataResponse is returned by GET /api/crypto/market-data.
+type MarketDataResponse struct {
+	MarketData []MarketDataEntry `json:"market_data"`
+	Count      int               `json:"count"`
+}
+
+// SymbolEntry represents a tracked symbol.
+type SymbolEntry struct {
+	Symbol       string `json:"symbol"`
+	Exchange     string `json:"exchange"`
+	ContractType string `json:"contract_type"`
+	Available    bool   `json:"available"`
+}
+
+// ListSymbolsResponse is returned by GET /api/crypto/symbols.
+type ListSymbolsResponse struct {
+	Symbols []SymbolEntry `json:"symbols"`
+	Count   int           `json:"count"`
+}
+
 // ErrorResponse represents an error response from the Tickory API.
 type ErrorResponse struct {
 	Error   string `json:"error"`
