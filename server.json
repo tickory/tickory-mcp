@@ -3,12 +3,12 @@
   "name": "io.github.tickory/tickory-mcp",
   "title": "Tickory MCP",
   "description": "Tickory MCP server for Binance scans, alert events, and explainability.",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@tickory/mcp",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "transport": {
         "type": "stdio"
       }
