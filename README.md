@@ -4,6 +4,8 @@ Real-time crypto scanner alerts, delivered straight to your AI agent.
 
 [Tickory](https://tickory.app) monitors Binance Futures markets using programmable CEL rules and sends alerts when conditions match. This MCP server lets any agent framework create scans, read alert events, and understand *why* alerts triggered — all through the [Model Context Protocol](https://modelcontextprotocol.io).
 
+[![Tickory Server MCP server](https://glama.ai/mcp/servers/tickory/tickory-mcp/badges/card.svg)](https://glama.ai/mcp/servers/tickory/tickory-mcp)
+
 ## Quick demo
 
 ```
