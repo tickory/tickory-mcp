@@ -942,19 +942,7 @@ func relayEventSummaryFromAPI(event RelayEventAPIResponse) RelayEventSummary {
 func relayTraceEventFromAPI(event RelayEventAPIResponse) RelayTraceEvent {
 	routes := make([]RelayTraceRoute, 0, len(event.Routes))
 	for _, route := range event.Routes {
-		routes = append(routes, RelayTraceRoute{
-			RouteID:          route.RouteID,
-			FilterStatus:     route.FilterStatus,
-			FilterReason:     route.FilterReason,
-			EnqueueStatus:    route.EnqueueStatus,
-			EnqueueError:     route.EnqueueError,
-			DuplicateCount:   route.DuplicateCount,
-			AlertEventID:     route.AlertEventID,
-			AlertEventStatus: route.AlertEventStatus,
-			AlertEventError:  route.AlertEventError,
-			ReceiptID:        route.ReceiptID,
-			DeliverySummary:  route.DeliverySummary,
-		})
+		routes = append(routes, RelayTraceRoute(route))
 	}
 
 	return RelayTraceEvent{
