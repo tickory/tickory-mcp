@@ -471,6 +471,8 @@ func (s *Server) toolHandler(name string) ToolHandler {
 		return s.handleUpdateScan
 	case toolRunScan:
 		return s.handleRunScan
+	case toolRunAdHocScan:
+		return s.handleRunAdHocScan
 	case toolDescribeIndicators:
 		return s.handleDescribeIndicators
 	case toolListAlertEvents:
@@ -587,6 +589,23 @@ func (s *Server) handleRunScan(ctx context.Context, raw json.RawMessage) (any, e
 	}
 
 	return RunScanResult{
+		SchemaVersion: contractVersion,
+		Run:           *resp,
+	}, nil
+}
+
+func (s *Server) handleRunAdHocScan(ctx context.Context, raw json.RawMessage) (any, error) {
+	args, err := decodeArguments[RunAdHocScanRequest](raw)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.client.RunAdHocScan(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+
+	return RunAdHocScanResult{
 		SchemaVersion: contractVersion,
 		Run:           *resp,
 	}, nil

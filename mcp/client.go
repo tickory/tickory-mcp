@@ -155,6 +155,16 @@ func (c *Client) RunScan(ctx context.Context, req RunScanRequest) (*ExecuteScanR
 	return &resp, nil
 }
 
+func (c *Client) RunAdHocScan(ctx context.Context, req RunAdHocScanRequest) (*ExecuteScanResponse, error) {
+	upstream := ExecuteAdHocScanRequest(req)
+
+	var resp ExecuteScanResponse
+	if err := c.doJSON(ctx, http.MethodPost, "/api/crypto/scans/execute-ad-hoc", nil, upstream, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 func (c *Client) DescribeIndicators(ctx context.Context, contractType string) (*CELVariableReferenceResponse, error) {
 	query := url.Values{}
 	if trimmed := strings.TrimSpace(contractType); trimmed != "" {

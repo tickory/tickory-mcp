@@ -15,6 +15,7 @@ const (
 	toolCreateScan             = "tickory_create_scan"
 	toolUpdateScan             = "tickory_update_scan"
 	toolRunScan                = "tickory_run_scan"
+	toolRunAdHocScan           = "tickory_run_ad_hoc_scan"
 	toolDescribeIndicators     = "tickory_describe_indicators"
 	toolListAlertEvents        = "tickory_list_alert_events"
 	toolGetAlertEvent          = "tickory_get_alert_event"
@@ -145,6 +146,21 @@ func (r RunScanRequest) Validate() error {
 	return nil
 }
 
+type RunAdHocScanRequest struct {
+	Name          string          `json:"name,omitempty"`
+	Expression    string          `json:"expression"`
+	Symbols       []string        `json:"symbols,omitempty"`
+	HardGates     *HardGatesInput `json:"hard_gates,omitempty"`
+	BuilderConfig map[string]any  `json:"builder_config,omitempty"`
+}
+
+func (r RunAdHocScanRequest) Validate() error {
+	if strings.TrimSpace(r.Expression) == "" {
+		return fmt.Errorf("expression is required")
+	}
+	return nil
+}
+
 type ListAlertEventsArgs struct {
 	Since  *string `json:"since,omitempty"`
 	ScanID *string `json:"scan_id,omitempty"`
@@ -247,6 +263,11 @@ type RunScanResult struct {
 	Run           ExecuteScanResponse `json:"run"`
 }
 
+type RunAdHocScanResult struct {
+	SchemaVersion string              `json:"schema_version"`
+	Run           ExecuteScanResponse `json:"run"`
+}
+
 type ListAlertEventsResult struct {
 	SchemaVersion  string               `json:"schema_version"`
 	PayloadVersion string               `json:"payload_version"`
@@ -345,6 +366,27 @@ func toolDefinitions() []ToolDefinition {
 				"run": schemaObject(map[string]any{
 					"run_id":     stringSchema("Scan run identifier."),
 					"scan_id":    stringSchema("Scan identifier."),
+					"started_at": dateTimeSchema("Run start time."),
+					"status":     stringSchema("Run status."),
+					"matches":    schemaArray(scanMatchSchema()),
+				}, "run_id", "scan_id", "started_at", "status", "matches"),
+			}, "schema_version", "run"),
+		},
+		{
+			Name:        toolRunAdHocScan,
+			Description: "Execute a one-off scan immediately without creating or modifying a saved scan.",
+			InputSchema: schemaObject(map[string]any{
+				"name":           stringSchema("Optional ad hoc scan name used in the run snapshot."),
+				"expression":     stringSchema("Tickory CEL expression."),
+				"symbols":        schemaArray(stringSchema("Optional symbol override.")),
+				"hard_gates":     hardGatesSchema(),
+				"builder_config": looseObjectSchema("Optional visual builder state."),
+			}, "expression"),
+			OutputSchema: schemaObject(map[string]any{
+				"schema_version": schemaVersionSchema(),
+				"run": schemaObject(map[string]any{
+					"run_id":     stringSchema("Scan run identifier."),
+					"scan_id":    stringSchema("Saved scan identifier. Empty for ad hoc runs."),
 					"started_at": dateTimeSchema("Run start time."),
 					"status":     stringSchema("Run status."),
 					"matches":    schemaArray(scanMatchSchema()),

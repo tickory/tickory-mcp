@@ -64,6 +64,15 @@ type ExecuteScanRequest struct {
 	Symbols []string `json:"symbols,omitempty"`
 }
 
+// ExecuteAdHocScanRequest represents a one-off scan execution request.
+type ExecuteAdHocScanRequest struct {
+	Name          string          `json:"name,omitempty"`
+	Expression    string          `json:"expression"`
+	Symbols       []string        `json:"symbols,omitempty"`
+	HardGates     *HardGatesInput `json:"hard_gates,omitempty"`
+	BuilderConfig map[string]any  `json:"builder_config,omitempty"`
+}
+
 // ExecuteScanResponse represents an immediate scan execution response.
 type ExecuteScanResponse struct {
 	RunID     string              `json:"run_id"`

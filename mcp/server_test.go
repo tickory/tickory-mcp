@@ -57,8 +57,8 @@ func TestHandleMessageInitializeAndListTools(t *testing.T) {
 		t.Fatalf("decode tools/list result: %v", err)
 	}
 
-	if len(result.Tools) != 17 {
-		t.Fatalf("expected 17 tools, got %d", len(result.Tools))
+	if len(result.Tools) != 18 {
+		t.Fatalf("expected 18 tools, got %d", len(result.Tools))
 	}
 
 	names := make([]string, 0, len(result.Tools))
@@ -75,6 +75,7 @@ func TestHandleMessageInitializeAndListTools(t *testing.T) {
 		toolCreateScan,
 		toolUpdateScan,
 		toolRunScan,
+		toolRunAdHocScan,
 		toolDescribeIndicators,
 		toolListAlertEvents,
 		toolGetAlertEvent,
@@ -608,6 +609,152 @@ func TestHandleToolCallGetMarketData(t *testing.T) {
 	}
 	if mdResult.MarketData[0].Price != 67500.50 {
 		t.Fatalf("expected price 67500.50, got %v", mdResult.MarketData[0].Price)
+	}
+}
+
+func TestHandleToolCallRunAdHocScanUsesExecuteAdHocEndpoint(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/crypto/scans/execute-ad-hoc" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if r.Method != http.MethodPost {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		if got := body["name"]; got != "Quick spot test" {
+			t.Fatalf("expected name Quick spot test, got %#v", got)
+		}
+		if got := body["expression"]; got != "has_rsi_14 && rsi_14 < 30" {
+			t.Fatalf("expected expression, got %#v", got)
+		}
+		if symbols, ok := body["symbols"].([]any); !ok || len(symbols) != 2 || symbols[0] != "BTCUSDT" || symbols[1] != "ETHUSDT" {
+			t.Fatalf("expected symbols [BTCUSDT ETHUSDT], got %#v", body["symbols"])
+		}
+
+		hardGates, ok := body["hard_gates"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected hard_gates object, got %#v", body["hard_gates"])
+		}
+		if got := hardGates["require_rsi_14"]; got != true {
+			t.Fatalf("expected require_rsi_14=true, got %#v", got)
+		}
+
+		builderConfig, ok := body["builder_config"].(map[string]any)
+		if !ok || builderConfig["source"] != "unit-test" {
+			t.Fatalf("expected builder_config source=unit-test, got %#v", body["builder_config"])
+		}
+
+		writeJSONTest(t, w, http.StatusOK, map[string]any{
+			"run_id":     "run-adhoc-1",
+			"scan_id":    "",
+			"started_at": "2026-03-22T09:00:00Z",
+			"status":     "completed",
+			"matches": []any{
+				map[string]any{
+					"symbol":        "BTCUSDT",
+					"exchange":      "binance",
+					"contract_type": "spot",
+					"timestamp":     "2026-03-22T08:59:00Z",
+					"price":         51000.0,
+					"volume_quote":  1500000.0,
+					"rsi_14":        25.0,
+					"ma_50":         50000.0,
+					"timeframe":     "1m",
+				},
+			},
+		})
+	}))
+	defer upstream.Close()
+
+	client, err := NewClient(Config{
+		BaseURL:    upstream.URL,
+		APIKey:     "tk_test_key",
+		HTTPClient: upstream.Client(),
+	})
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+
+	server := NewServer(client, "test-version")
+	server.negotiated = true
+	server.ready = true
+
+	resp := mustHandleMessage(t, server, `{
+		"jsonrpc":"2.0",
+		"id":11,
+		"method":"tools/call",
+		"params":{
+			"name":"tickory_run_ad_hoc_scan",
+			"arguments":{
+				"name":"Quick spot test",
+				"expression":"has_rsi_14 && rsi_14 < 30",
+				"symbols":["BTCUSDT","ETHUSDT"],
+				"hard_gates":{"require_rsi_14":true},
+				"builder_config":{"source":"unit-test"}
+			}
+		}
+	}`)
+
+	if resp.Error != nil {
+		t.Fatalf("expected tool success, got error: %+v", resp.Error)
+	}
+
+	var result toolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		t.Fatalf("decode tool result: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success result, got error payload: %s", result.Content[0].Text)
+	}
+
+	payload, err := json.Marshal(result.StructuredContent)
+	if err != nil {
+		t.Fatalf("marshal structured content: %v", err)
+	}
+
+	var runResult RunAdHocScanResult
+	if err := json.Unmarshal(payload, &runResult); err != nil {
+		t.Fatalf("decode ad hoc run result: %v", err)
+	}
+
+	if runResult.Run.RunID != "run-adhoc-1" {
+		t.Fatalf("expected run-adhoc-1, got %q", runResult.Run.RunID)
+	}
+	if runResult.Run.ScanID != "" {
+		t.Fatalf("expected empty scan_id for ad hoc run, got %q", runResult.Run.ScanID)
+	}
+	if len(runResult.Run.Matches) != 1 || runResult.Run.Matches[0].Symbol != "BTCUSDT" {
+		t.Fatalf("unexpected matches: %#v", runResult.Run.Matches)
+	}
+}
+
+func TestHandleToolCallRunAdHocScanValidation(t *testing.T) {
+	server := NewServer(&Client{}, "test-version")
+	server.negotiated = true
+	server.ready = true
+
+	resp := mustHandleMessage(t, server, `{
+		"jsonrpc":"2.0",
+		"id":12,
+		"method":"tools/call",
+		"params":{
+			"name":"tickory_run_ad_hoc_scan",
+			"arguments":{"symbols":["BTCUSDT"]}
+		}
+	}`)
+
+	if resp.Error == nil {
+		t.Fatal("expected validation error, got success")
+	}
+	if resp.Error.Code != rpcCodeBadParams {
+		t.Fatalf("expected bad params, got %+v", resp.Error)
+	}
+	if !strings.Contains(resp.Error.Message, "expression is required") {
+		t.Fatalf("expected expression validation error, got %+v", resp.Error)
 	}
 }
 

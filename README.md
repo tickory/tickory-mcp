@@ -1,8 +1,8 @@
 # Tickory MCP Server
 
-Real-time crypto scanner alerts and TradingView relay routing, delivered straight to your AI agent.
+Real-time crypto scanner alerts, ad hoc scan execution, and TradingView relay routing, delivered straight to your AI agent.
 
-[Tickory](https://tickory.app) monitors Binance Futures markets using programmable CEL rules and TradingView relay routing. This MCP server lets any agent framework create scans, configure relay sources and routes, inspect relay traces, read alert events, and understand *why* alerts triggered — all through the [Model Context Protocol](https://modelcontextprotocol.io).
+[Tickory](https://tickory.app) monitors Binance Futures markets using programmable CEL rules and TradingView relay routing. This MCP server lets any agent framework create scans, run saved or ad hoc scans, configure relay sources and routes, inspect relay traces, read alert events, and understand *why* alerts triggered — all through the [Model Context Protocol](https://modelcontextprotocol.io).
 
 [![Tickory Server MCP server](https://glama.ai/mcp/servers/tickory/tickory-mcp/badges/card.svg)](https://glama.ai/mcp/servers/tickory/tickory-mcp)
 
@@ -80,7 +80,7 @@ export TICKORY_API_BASE_URL=https://api.tickory.app
 export TICKORY_API_KEY=tk_xxxxxxxx_yyyyyyyyyyyyyyyyyyyyyyyy
 ```
 
-Relay workflows require API keys with both `manage_routing` and `read_events`. Scan-only workflows can use narrower scopes.
+Relay workflows require API keys with both `manage_routing` and `read_events`. Saved-scan and ad hoc scan execution both require `manage_scans`.
 
 ### Claude Desktop
 
@@ -133,6 +133,7 @@ Point either to `npx @tickory/mcp` or to the standalone `tickory-mcp` binary wit
 | `tickory_create_scan` | Create a new scan with CEL expression and hard gates |
 | `tickory_update_scan` | Replace an existing scan definition |
 | `tickory_run_scan` | Trigger a scan run immediately |
+| `tickory_run_ad_hoc_scan` | Execute a one-off expression immediately without creating a saved scan |
 | `tickory_describe_indicators` | Describe available CEL variables, recommended guards, and example expressions |
 | `tickory_list_alert_events` | List alert events with cursor pagination |
 | `tickory_get_alert_event` | Fetch one alert event by UUID |
@@ -145,6 +146,8 @@ Point either to `npx @tickory/mcp` or to the standalone `tickory-mcp` binary wit
 | `tickory_replay_relay_event` | Replay one failed relay route when the backend allows it |
 
 All tools return `schema_version: "v1"` for contract stability.
+
+`tickory_run_scan` executes an existing saved scan by `scan_id`. `tickory_run_ad_hoc_scan` executes a one-off expression and does not create or update a saved scan, so the returned run payload may have an empty `scan_id`.
 
 ## Configuration
 
