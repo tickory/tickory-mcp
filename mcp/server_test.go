@@ -57,8 +57,8 @@ func TestHandleMessageInitializeAndListTools(t *testing.T) {
 		t.Fatalf("decode tools/list result: %v", err)
 	}
 
-	if len(result.Tools) != 11 {
-		t.Fatalf("expected 11 tools, got %d", len(result.Tools))
+	if len(result.Tools) != 17 {
+		t.Fatalf("expected 17 tools, got %d", len(result.Tools))
 	}
 
 	names := make([]string, 0, len(result.Tools))
@@ -81,6 +81,12 @@ func TestHandleMessageInitializeAndListTools(t *testing.T) {
 		toolExplainAlertEvent,
 		toolGetMarketData,
 		toolListSymbols,
+		toolCreateRelaySource,
+		toolListRelaySources,
+		toolAddRelayRoute,
+		toolListRelayEvents,
+		toolGetRelayTrace,
+		toolReplayRelayEvent,
 	}
 	if strings.Join(names, ",") != strings.Join(expected, ",") {
 		t.Fatalf("unexpected tool order: %v", names)

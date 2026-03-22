@@ -260,6 +260,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query url.Valu
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "tickory-mcp/1.0")
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("X-API-Key", c.apiKey)
 	if requestBody != nil {
 		req.Header.Set("Content-Type", "application/json")

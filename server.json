@@ -2,13 +2,13 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.tickory/tickory-mcp",
   "title": "Tickory MCP",
-  "description": "Tickory MCP server for Binance scans, alert events, and explainability.",
-  "version": "0.3.0",
+  "description": "Tickory MCP server for Binance scans, TradingView relay routing, alert events, and explainability.",
+  "version": "0.4.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@tickory/mcp",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "transport": {
         "type": "stdio"
       }

@@ -483,6 +483,18 @@ func (s *Server) toolHandler(name string) ToolHandler {
 		return s.handleGetMarketData
 	case toolListSymbols:
 		return s.handleListSymbols
+	case toolCreateRelaySource:
+		return s.handleCreateRelaySource
+	case toolListRelaySources:
+		return s.handleListRelaySources
+	case toolAddRelayRoute:
+		return s.handleAddRelayRoute
+	case toolListRelayEvents:
+		return s.handleListRelayEvents
+	case toolGetRelayTrace:
+		return s.handleGetRelayTrace
+	case toolReplayRelayEvent:
+		return s.handleReplayRelayEvent
 	default:
 		return func(context.Context, json.RawMessage) (any, error) {
 			return nil, fmt.Errorf("tool %s is not registered", name)
@@ -743,7 +755,7 @@ func toolResultFromError(err error) toolResult {
 
 	var transportErr *TransportError
 	if errors.As(err, &transportErr) {
-		body.Error.MCPCode = "upstream_unavailable"
+		body.Error.MCPCode = "upstream_error"
 		body.Error.Message = transportErr.Error()
 		body.Error.Retryable = true
 	}
@@ -774,7 +786,7 @@ func mapHTTPStatus(status int) (string, bool) {
 		return "rate_limited", true
 	default:
 		if status >= 500 {
-			return "upstream_unavailable", true
+			return "upstream_error", true
 		}
 		return "upstream_http_error", false
 	}

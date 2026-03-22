@@ -274,7 +274,7 @@ func validateTimeframe(value string) error {
 }
 
 func toolDefinitions() []ToolDefinition {
-	return []ToolDefinition{
+	tools := []ToolDefinition{
 		{
 			Name:        toolListScans,
 			Description: "List scans visible to the API key owner.",
@@ -439,6 +439,8 @@ func toolDefinitions() []ToolDefinition {
 			}, "schema_version", "symbols", "count"),
 		},
 	}
+
+	return append(tools, relayToolDefinitions()...)
 }
 
 func scanSchema() map[string]any {
